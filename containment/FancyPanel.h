@@ -25,6 +25,11 @@
 
 #include <Plasma/Containment>
 
+class QAction;
+class QTimer;
+class QGraphicsLinearLayout;
+class Spacer;
+
 class FancyPanel : public Plasma::Containment
 {
     Q_OBJECT
@@ -35,16 +40,38 @@ class FancyPanel : public Plasma::Containment
 
         void init();
         Plasma::Applet* addApplet(const QString &name, const QVariantList &args = QVariantList(), const QRectF &geometry = QRectF(-1, -1, -1, -1));
+    void showDropZone(const QPoint pos);
 
-    public slots:
-        void setSize(QSize size);
 
     protected:
         void constraintsEvent(Plasma::Constraints constraints);
         void contextMenuEvent(QGraphicsSceneContextMenuEvent *event);
+	void saveState(KConfigGroup &config) const;
+	void restore(KConfigGroup &group);
+	void saveContents(KConfigGroup &group) const;
 
     private:
+        int getInsertIndex(Plasma::FormFactor f, const QPointF &pos);
+
         Plasma::Applet *m_applet;
+        QGraphicsLinearLayout *m_layout;
+        bool m_canResize;
+        QSize m_currentSize;
+        int m_spacerIndex;
+        Spacer *m_spacer;
+        Spacer *m_lastSpace;
+        QTimer *m_lastSpaceTimer;
+        
+	friend class Spacer;
+
+   private slots:
+	void appletRemoved(Plasma::Applet* applet);
+        void adjustLastSpace();
+	void layoutApplet(Plasma::Applet* applet, const QPointF &pos);
+	void updateSize();
+	void enableUpdateSize();
+    public slots:
+        void setSize(QSize size);
 };
 
 #endif
