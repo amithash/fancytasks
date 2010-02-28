@@ -41,11 +41,11 @@ class FancyPanel : public Plasma::Containment
         void init();
         Plasma::Applet* addApplet(const QString &name, const QVariantList &args = QVariantList(), const QRectF &geometry = QRectF(-1, -1, -1, -1));
     void showDropZone(const QPoint pos);
+        QList<QAction*> contextualActions();
 
 
     protected:
         void constraintsEvent(Plasma::Constraints constraints);
-        void contextMenuEvent(QGraphicsSceneContextMenuEvent *event);
 	void saveState(KConfigGroup &config) const;
 	void restore(KConfigGroup &group);
 	void saveContents(KConfigGroup &group) const;
@@ -53,6 +53,7 @@ class FancyPanel : public Plasma::Containment
     private:
         int getInsertIndex(Plasma::FormFactor f, const QPointF &pos);
 
+        QAction* m_configureAction;
         Plasma::Applet *m_applet;
         QGraphicsLinearLayout *m_layout;
         bool m_canResize;

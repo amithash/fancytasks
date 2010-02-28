@@ -102,6 +102,7 @@ protected:
 
 
 FancyPanel::FancyPanel(QObject *parent, const QVariantList &args) : Containment(parent, args),
+    m_configureAction(0),
     m_applet(NULL),
     m_layout(0),
     m_canResize(true),
@@ -166,6 +167,7 @@ void FancyPanel::init()
 
     constraintsEvent(Plasma::LocationConstraint);
 
+    /* 
     m_applet = Plasma::Applet::load("fancytasks");
 
     if (m_applet)
@@ -180,6 +182,7 @@ void FancyPanel::init()
 
         connect(m_applet, SIGNAL(sizeChanged(QSize)), this, SLOT(setSize(QSize)));
     }
+    */
 
     setDrawWallpaper(false);
     m_lastSpaceTimer = new QTimer(this);
@@ -302,23 +305,46 @@ void FancyPanel::updateSize()
 
 void FancyPanel::constraintsEvent(Plasma::Constraints constraints)
 {
-    if (constraints & Plasma::LocationConstraint)
-    {
-        Plasma::FormFactor form = formFactor();
-        Qt::Orientation layoutDirection = form == Plasma::Vertical ? Qt::Vertical : Qt::Horizontal;
-        setFormFactor(Plasma::Horizontal);
-
-        setLocation(Plasma::BottomEdge);
-
+    if(constraints & Plasma::FormFactorConstraint) {
+	Plasma::FormFactor form = formFactor();
+	Qt::Orientation layoutDirection = form == Plasma::Vertical ?
+		Qt::Vertical : Qt::Horizontal;
 	if(m_layout) {
 		m_layout->setMaximumSize(size());
 		m_layout->setOrientation(layoutDirection);
+	}
+    }
+    if (m_layout && (constraints & Plasma::SizeConstraint)) {
+        m_layout->setMaximumSize(size());
+    }
+
+    if (constraints & Plasma::LocationConstraint) {
+	switch(location()) {
+		case BottomEdge:
+		case TopEdge:
+			setFormFactor(Plasma::Horizontal);
+			break;
+		case RightEdge:
+		case LeftEdge:
+			setFormFactor(Plasma::Vertical);
+			break;
+		case Floating:
+			kDebug() << "Floating is unimplemented";
+			break;
+		default:
+			kDebug() << "Invalid Location!!!";
 	}
     }
 
     if(constraints & Plasma::StartupCompletedConstraint) {
 	connect(this, SIGNAL(appletAdded(Plasma::Applet*,QPointF)),
 		this, SLOT(layoutApplet(Plasma::Applet*, QPointF)));
+    }
+
+    if(constraints & Plasma::ImmutableConstraint) {
+	bool unlocked = immutability() == Plasma::Mutable;
+	m_configureAction->setEnabled(unlocked);
+	m_configureAction->setVisible(unlocked);
     }
 
     setBackgroundHints(NoBackground);
@@ -399,12 +425,14 @@ void FancyPanel::restore(KConfigGroup &group)
 void FancyPanel::saveContents(KConfigGroup &group) const
 {
 	Containment::saveContents(group);
+	KConfigGroup appletsConfig(&group, "Applets");
+
 	for(int order = 0; order < m_layout->count(); ++order) {
 		const Applet *applet = dynamic_cast<Applet *>(m_layout->itemAt(order));
 		if(applet) {
-			KConfigGroup appletConfig(&appletConfig, QString::number(applet->id()));
-			KConfigGroup m_layoutConfig(&appletConfig, "LayoutInformation");
-			m_layoutConfig.writeEntry("Order", order);
+			KConfigGroup appletConfig(&appletsConfig, QString::number(applet->id()));
+			KConfigGroup layoutConfig(&appletConfig, "LayoutInformation");
+			layoutConfig.writeEntry("Order", order);
 		}
 	}
 }
@@ -439,30 +467,19 @@ int FancyPanel::getInsertIndex(Plasma::FormFactor f, const QPointF &pos)
     return insertIndex;
 }
 
-void FancyPanel::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
+QList<QAction*> FancyPanel::contextualActions()
 {
-    Q_UNUSED(event)
+	if(!m_configureAction) {
+		m_configureAction = new QAction(i18n("Fancy Panel Settings"), this);
+		m_configureAction->setIcon(KIcon("configure"));
+		connect(m_configureAction, SIGNAL(triggered()),
+			this, SIGNAL(toolBoxToggled()));
+		constraintsEvent(Plasma::ImmutableConstraint);
+	}
+	QList<QAction*> actions;
+	actions.append(m_configureAction);
 
-    KMenu *menu = new KMenu;
-
-    if (m_applet)
-    {
-        menu->addAction(KIcon("configure"), i18n("Configure"), m_applet, SLOT(showConfigurationInterface()));
-    }
-
-    if (immutability() == Plasma::Mutable)
-    {
-        menu->addAction(KIcon("configure"), i18n("Configure Panel"), this, SIGNAL(toolBoxToggled()));
-        menu->addSeparator();
-        menu->addAction(KIcon("edit-delete"), i18n("Remove Panel"), this, SLOT(destroy()));
-    }
-
-    if (menu->actions().count())
-    {
-        menu->exec(QCursor::pos());
-    }
-
-    delete menu;
+	return actions;
 }
 
 void FancyPanel::setSize(QSize size)
