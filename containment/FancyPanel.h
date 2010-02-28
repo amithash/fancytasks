@@ -30,6 +30,11 @@ class QTimer;
 class QGraphicsLinearLayout;
 class Spacer;
 
+namespace Plasma
+{
+	class FrameSvg;
+}
+
 class FancyPanel : public Plasma::Containment
 {
     Q_OBJECT
@@ -42,6 +47,9 @@ class FancyPanel : public Plasma::Containment
         Plasma::Applet* addApplet(const QString &name, const QVariantList &args = QVariantList(), const QRectF &geometry = QRectF(-1, -1, -1, -1));
     void showDropZone(const QPoint pos);
         QList<QAction*> contextualActions();
+   void paintInterface(QPainter *painter,
+                           const QStyleOptionGraphicsItem *option,
+                           const QRect& contentsRect);
 
 
     protected:
@@ -52,6 +60,7 @@ class FancyPanel : public Plasma::Containment
 
     private:
         int getInsertIndex(Plasma::FormFactor f, const QPointF &pos);
+        void updateBorders(const QRect &geom, bool themeChange = false);
 
         QAction* m_configureAction;
         QGraphicsLinearLayout *m_layout;
@@ -63,6 +72,8 @@ class FancyPanel : public Plasma::Containment
         QTimer *m_lastSpaceTimer;
 	QTimeLine *m_animationTimeLine; 
         Plasma::FrameSvg *m_background;
+        QRect m_lastViewGeom;
+        bool m_maskDirty;
         
 	friend class Spacer;
 

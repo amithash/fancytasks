@@ -8,6 +8,7 @@ include_directories(
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_BINARY_DIR}
    ${KDE4_INCLUDES}
+   ${KDEBASE_WORKSPACE_SOURCE_DIR}/libs/kephal
    )
 
 set(fancypanel_SRCS FancyPanel.cpp)
@@ -21,6 +22,7 @@ kde4_add_plugin(plasma_containment_fancypanel ${fancypanel_SRCS})
 target_link_libraries(plasma_containment_fancypanel
                       ${KDE4_PLASMA_LIBS}
                       ${KDE4_KIO_LIBS}
+		      kephal
                       )
 
 install(TARGETS plasma_containment_fancypanel

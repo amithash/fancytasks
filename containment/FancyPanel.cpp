@@ -24,6 +24,7 @@
 #include "FancyPanel.h"
 
 #include <limits>
+#include <cmath>
 
 #include <QAction>
 #include <QApplication>
@@ -58,6 +59,7 @@
 #include <Plasma/View>
 #include <Plasma/PaintUtils>
 
+#include <kephal/screens.h>
 
 using namespace Plasma;
 
@@ -108,11 +110,12 @@ FancyPanel::FancyPanel(QObject *parent, const QVariantList &args) : Containment(
     m_configureAction(0),
     m_layout(0),
     m_canResize(true),
-    m_currentSize(100, 100),
+    m_currentSize(QSize(Kephal::ScreenUtils::screenSize(screen()).width(),35)),
     m_spacerIndex(-1),
     m_spacer(0),
     m_lastSpace(0),
-    m_animationTimeLine(new QTimeLine(1000, this))
+    m_animationTimeLine(new QTimeLine(1000, this)),
+    m_maskDirty(true)
 {
     KGlobal::locale()->insertCatalog("fancypanel");
 
@@ -121,7 +124,7 @@ FancyPanel::FancyPanel(QObject *parent, const QVariantList &args) : Containment(
     m_background->setEnabledBorders(Plasma::FrameSvg::AllBorders);
     connect(m_background, SIGNAL(repaintNeeded()), this, SLOT(backgroundChanged()));
 
-    setBackgroundHints(NoBackground);
+//    setBackgroundHints(NoBackground);
 
     setZValue(150);
 
@@ -144,6 +147,42 @@ FancyPanel::~FancyPanel()
 {
 }
 
+void FancyPanel::paintInterface(QPainter *painter,
+                           const QStyleOptionGraphicsItem *option,
+                           const QRect& contentsRect)
+{
+    Q_UNUSED(contentsRect)
+    //FIXME: this background drawing is bad and ugly =)
+    // draw the background untransformed (saves lots of per-pixel-math)
+    painter->resetTransform();
+
+    const Containment::StyleOption *containmentOpt = qstyleoption_cast<const Containment::StyleOption *>(option);
+
+    QRect viewGeom;
+    if (containmentOpt && containmentOpt->view) {
+        viewGeom = containmentOpt->view->geometry();
+    }
+
+    if (m_maskDirty || m_lastViewGeom != viewGeom) {
+        m_maskDirty = false;
+        m_lastViewGeom = viewGeom;
+        updateBorders(viewGeom);
+        if (containmentOpt && containmentOpt->view && !m_background->mask().isEmpty()) {
+            containmentOpt->view->setMask(m_background->mask());
+      }
+    }
+
+    // blit the background (saves all the per-pixel-products that blending does)
+    painter->setCompositionMode(QPainter::CompositionMode_Source);
+    painter->setRenderHint(QPainter::Antialiasing);
+    QPixmap target = QPixmap(ceil(m_currentSize.width()), ceil(m_currentSize.height()));
+    painter->drawPixmap(0,0,target);
+
+    m_background->paintFrame(painter, option->exposedRect);
+
+}
+
+
 void FancyPanel::init()
 {
     setContainmentType(Containment::PanelContainment);
@@ -156,6 +195,8 @@ void FancyPanel::init()
     m_layout->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
 
     setLayout(m_layout);
+
+    updateBorders(geometry().toRect());
 
     setContentsMargins(0, 0, 0, 0);
 
@@ -179,6 +220,138 @@ void FancyPanel::init()
     connect(m_lastSpaceTimer, SIGNAL(timeout()),
 	    this, SLOT(adjustLastSpace));
 }
+
+void FancyPanel::updateBorders(const QRect &geom, bool themeChange)
+{
+    Plasma::Location loc = location();
+    FrameSvg::EnabledBorders enabledBorders = FrameSvg::AllBorders;
+    qreal topHeight = m_background->marginSize(Plasma::TopMargin);
+    qreal bottomHeight = m_background->marginSize(Plasma::BottomMargin);
+    qreal leftWidth = m_background->marginSize(Plasma::LeftMargin);
+    qreal rightWidth = m_background->marginSize(Plasma::RightMargin);
+
+    int s = screen();
+    if(s >= 0) {
+	if(loc == BottomEdge || loc == TopEdge) {
+		QRect r = Kephal::ScreenUtils::screenGeometry(s);
+		enabledBorders ^= FrameSvg::BottomBorder;
+		enabledBorders ^= FrameSvg::TopBorder;
+		if(loc == BottomEdge) {
+			bottomHeight = 0;
+			topHeight = m_currentSize.height();
+		} else {
+			topHeight = 0;
+			bottomHeight = m_currentSize.height();
+		}
+		if(geom.x() <= r.x()) {
+			leftWidth = 0;
+		}
+		if(geom.right() >= r.right()) {
+			rightWidth = 0;
+		}
+	} else if(loc == LeftEdge || loc == RightEdge){
+		QRect r = Kephal::ScreenUtils::screenGeometry(s);
+		enabledBorders ^= FrameSvg::LeftBorder;
+		enabledBorders ^= FrameSvg::RightBorder;
+		if(loc == LeftEdge) {
+			leftWidth = 0;
+			rightWidth = m_currentSize.width();
+		} else {
+			rightWidth = 0;
+			leftWidth = m_currentSize.width();
+		}
+		if(geom.y() <= r.y()) {
+			topHeight = 0;
+		}
+		if(geom.bottom() >= r.bottom()) {
+			bottomHeight = 0;
+		}
+	} else {
+		kDebug() << "No location???";
+	}
+    }
+
+	m_background->setEnabledBorders(enabledBorders);
+	m_background->getMargins(leftWidth, topHeight, rightWidth, bottomHeight);
+
+	const QGraphicsItem *box = toolBox();
+	if (box && immutability() == Mutable) {
+		QSizeF s = box->boundingRect().size();
+		if (formFactor() == Vertical) {
+            //hardcoded extra margin for the toolbox right now
+		bottomHeight += s.height();
+            //Default to horizontal for now
+		} else {
+			rightWidth += s.width();
+		}
+	}
+	if(m_layout) {
+		m_layout->setContentsMargins(leftWidth, topHeight, rightWidth,bottomHeight);
+	}
+	m_layout->invalidate();
+	resize(preferredSize());
+
+
+
+
+
+
+    //activate borders and fetch sizes again
+
+    //calculation of extra margins has to be done after getMargins
+    /* 
+    const QGraphicsItem *box = toolBox();
+    if (box && immutability() == Mutable) {
+        QSizeF s = box->boundingRect().size();
+        if (formFactor() == Vertical) {
+            //hardcoded extra margin for the toolbox right now
+            bottomHeight += s.height();
+            //Default to horizontal for now
+        } else {
+            rightWidth += s.width();
+        }
+    }
+    */
+
+    //invalidate the layout and set again
+    /* 
+    if (m_layout) {
+        switch (location()) {
+        case LeftEdge:
+            rightWidth = qMin(rightWidth, qMax(qreal(1), size().width() - KIconLoader::SizeMedium));
+            break;
+        case RightEdge:
+            leftWidth = qMin(leftWidth, qMax(qreal(1), size().width() - KIconLoader::SizeMedium));
+            break;
+        case TopEdge:
+            bottomHeight = qMin(bottomHeight, qMax(qreal(1), size().height() - KIconLoader::SizeMedium));
+            break;
+        case BottomEdge:
+            topHeight = qMin(topHeight, qMax(qreal(1), size().height() - KIconLoader::SizeMedium));
+            break;
+        default:
+            break;
+        }
+
+        qreal oldLeft = leftWidth;
+        qreal oldTop = topHeight;
+        qreal oldRight = rightWidth;
+        qreal oldBottom = bottomHeight;
+
+        if (themeChange) {
+            m_layout->getContentsMargins(&oldLeft, &oldTop, &oldRight, &oldBottom);
+        }
+
+        m_layout->setContentsMargins(leftWidth, topHeight, rightWidth, bottomHeight);
+
+        m_layout->invalidate();
+        resize(preferredSize());
+    }
+	*/
+
+    update();
+}
+
 
 void FancyPanel::backgroundChanged()
 {
@@ -299,6 +472,7 @@ void FancyPanel::updateSize()
 
 void FancyPanel::constraintsEvent(Plasma::Constraints constraints)
 {
+    m_maskDirty = true;
     if(constraints & Plasma::FormFactorConstraint) {
 	Plasma::FormFactor form = formFactor();
 	Qt::Orientation layoutDirection = form == Plasma::Vertical ?
@@ -310,7 +484,8 @@ void FancyPanel::constraintsEvent(Plasma::Constraints constraints)
     }
     if (m_layout && (constraints & Plasma::SizeConstraint)) {
         m_layout->setMaximumSize(size());
-	m_background->setElementPrefix(location());
+	//m_background->setElementPrefix(location());
+	m_background->resizeFrame(m_currentSize);
     }
 
     if (constraints & Plasma::LocationConstraint) {
@@ -344,7 +519,7 @@ void FancyPanel::constraintsEvent(Plasma::Constraints constraints)
 	m_configureAction->setVisible(unlocked);
     }
 
-    setBackgroundHints(NoBackground);
+//    setBackgroundHints(NoBackground);
 
     enableAction("add widgets", true);
     enableAction("add space", true);

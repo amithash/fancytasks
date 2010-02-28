@@ -218,7 +218,7 @@ void Applet::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QW
 
     painter->fillRect(rect(), Qt::transparent);
 
-    if (config().readEntry("paintBackground", true) && ((formFactor() != Plasma::Horizontal && formFactor() != Plasma::Vertical) || (containment() && containment()->inherits("FancyPanel"))))
+    if (config().readEntry("paintBackground", true) && ((formFactor() != Plasma::Horizontal && formFactor() != Plasma::Vertical)))
     {
         painter->setRenderHint(QPainter::Antialiasing);
         painter->setCompositionMode(QPainter::CompositionMode_Source);
@@ -1275,7 +1275,7 @@ void Applet::updateSize()
 
     m_itemSize = m_appletMaximumHeight;
 
-    if (location() == Plasma::Floating || (containment() && containment()->inherits("FancyPanel")))
+    if (location() == Plasma::Floating )
     {
         m_appletMaximumWidth = (m_background->marginSize(Plasma::LeftMargin) + m_background->marginSize(Plasma::RightMargin));
     }
