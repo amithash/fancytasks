@@ -54,7 +54,6 @@ class FancyPanel : public Plasma::Containment
         int getInsertIndex(Plasma::FormFactor f, const QPointF &pos);
 
         QAction* m_configureAction;
-        Plasma::Applet *m_applet;
         QGraphicsLinearLayout *m_layout;
         bool m_canResize;
         QSize m_currentSize;
@@ -62,6 +61,8 @@ class FancyPanel : public Plasma::Containment
         Spacer *m_spacer;
         Spacer *m_lastSpace;
         QTimer *m_lastSpaceTimer;
+	QTimeLine *m_animationTimeLine; 
+        Plasma::FrameSvg *m_background;
         
 	friend class Spacer;
 
@@ -71,6 +72,7 @@ class FancyPanel : public Plasma::Containment
 	void layoutApplet(Plasma::Applet* applet, const QPointF &pos);
 	void updateSize();
 	void enableUpdateSize();
+	void backgroundChanged();
     public slots:
         void setSize(QSize size);
 };

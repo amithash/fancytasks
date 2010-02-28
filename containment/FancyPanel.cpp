@@ -39,6 +39,9 @@
 #include <QTimer>
 #include <QPainter>
 #include <QSignalMapper>
+#include <QTransform>
+#include <QTimeLine>
+
 
 #include <KDebug>
 #include <KIcon>
@@ -103,15 +106,20 @@ protected:
 
 FancyPanel::FancyPanel(QObject *parent, const QVariantList &args) : Containment(parent, args),
     m_configureAction(0),
-    m_applet(NULL),
     m_layout(0),
     m_canResize(true),
     m_currentSize(100, 100),
     m_spacerIndex(-1),
     m_spacer(0),
-    m_lastSpace(0)
+    m_lastSpace(0),
+    m_animationTimeLine(new QTimeLine(1000, this))
 {
     KGlobal::locale()->insertCatalog("fancypanel");
+
+    m_background = new Plasma::FrameSvg(this);
+    m_background->setImagePath("widgets/fancytasks");
+    m_background->setEnabledBorders(Plasma::FrameSvg::AllBorders);
+    connect(m_background, SIGNAL(repaintNeeded()), this, SLOT(backgroundChanged()));
 
     setBackgroundHints(NoBackground);
 
@@ -122,6 +130,11 @@ FancyPanel::FancyPanel(QObject *parent, const QVariantList &args) : Containment(
     setSize(QSize(100, 100));
     resize(m_currentSize);
 
+    m_animationTimeLine->setFrameRange(0, 100);
+    m_animationTimeLine->setUpdateInterval(50);
+    m_animationTimeLine->setCurveShape(QTimeLine::LinearCurve);
+
+
     connect(this, SIGNAL(appletRemoved(Plasma::Applet*)),
 	    this, SLOT(appletRemoved(Plasma::Applet*)));
 
@@ -129,13 +142,6 @@ FancyPanel::FancyPanel(QObject *parent, const QVariantList &args) : Containment(
 
 FancyPanel::~FancyPanel()
 {
-    if (m_applet)
-    {
-        KConfigGroup panelConfiguration = config();
-        KConfigGroup appletConfiguration(&panelConfiguration, "Applet");
-
-        m_applet->save(appletConfiguration);
-    }
 }
 
 void FancyPanel::init()
@@ -167,28 +173,16 @@ void FancyPanel::init()
 
     constraintsEvent(Plasma::LocationConstraint);
 
-    /* 
-    m_applet = Plasma::Applet::load("fancytasks");
-
-    if (m_applet)
-    {
-        KConfigGroup panelConfiguration = config();
-        KConfigGroup appletConfiguration(&panelConfiguration, "Applet");
-
-        m_layout->addItem(m_applet);
-
-        m_applet->init();
-        m_applet->restore(appletConfiguration);
-
-        connect(m_applet, SIGNAL(sizeChanged(QSize)), this, SLOT(setSize(QSize)));
-    }
-    */
-
     setDrawWallpaper(false);
     m_lastSpaceTimer = new QTimer(this);
     m_lastSpaceTimer->setSingleShot(true);
     connect(m_lastSpaceTimer, SIGNAL(timeout()),
 	    this, SLOT(adjustLastSpace));
+}
+
+void FancyPanel::backgroundChanged()
+{
+    constraintsEvent(Plasma::LocationConstraint);
 }
 
 void FancyPanel::adjustLastSpace()
@@ -316,6 +310,7 @@ void FancyPanel::constraintsEvent(Plasma::Constraints constraints)
     }
     if (m_layout && (constraints & Plasma::SizeConstraint)) {
         m_layout->setMaximumSize(size());
+	m_background->setElementPrefix(location());
     }
 
     if (constraints & Plasma::LocationConstraint) {
@@ -334,9 +329,11 @@ void FancyPanel::constraintsEvent(Plasma::Constraints constraints)
 		default:
 			kDebug() << "Invalid Location!!!";
 	}
+	m_background->resizeFrame(m_currentSize);
     }
 
     if(constraints & Plasma::StartupCompletedConstraint) {
+	m_background->resizeFrame(m_currentSize);
 	connect(this, SIGNAL(appletAdded(Plasma::Applet*,QPointF)),
 		this, SLOT(layoutApplet(Plasma::Applet*, QPointF)));
     }
