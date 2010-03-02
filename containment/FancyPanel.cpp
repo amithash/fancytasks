@@ -155,6 +155,7 @@ void FancyPanel::paintInterface(QPainter *painter,
     //FIXME: this background drawing is bad and ugly =)
     // draw the background untransformed (saves lots of per-pixel-math)
     painter->resetTransform();
+    painter->fillRect(rect(), Qt::transparent);
 
     const Containment::StyleOption *containmentOpt = qstyleoption_cast<const Containment::StyleOption *>(option);
 
@@ -175,10 +176,9 @@ void FancyPanel::paintInterface(QPainter *painter,
     // blit the background (saves all the per-pixel-products that blending does)
     painter->setCompositionMode(QPainter::CompositionMode_Source);
     painter->setRenderHint(QPainter::Antialiasing);
-    QPixmap target = QPixmap(ceil(m_currentSize.width()), ceil(m_currentSize.height()));
-    painter->drawPixmap(0,0,target);
 
-    m_background->paintFrame(painter, option->exposedRect);
+    m_background->resizeFrame(boundingRect().size());
+    m_background->paintFrame(painter);
 
 }
 
@@ -210,8 +210,6 @@ void FancyPanel::init()
     setMinimumSize(cg.readEntry("minimumSize", m_currentSize));
     setMaximumSize(cg.readEntry("maximumSize", m_currentSize));
 
-
-
     constraintsEvent(Plasma::LocationConstraint);
 
     setDrawWallpaper(false);
@@ -234,14 +232,14 @@ void FancyPanel::updateBorders(const QRect &geom, bool themeChange)
     if(s >= 0) {
 	if(loc == BottomEdge || loc == TopEdge) {
 		QRect r = Kephal::ScreenUtils::screenGeometry(s);
-		enabledBorders ^= FrameSvg::BottomBorder;
-		enabledBorders ^= FrameSvg::TopBorder;
+//		enabledBorders ^= FrameSvg::BottomBorder;
+//		enabledBorders ^= FrameSvg::TopBorder;
 		if(loc == BottomEdge) {
 			bottomHeight = 0;
-			topHeight = m_currentSize.height();
+			topHeight += m_currentSize.height();
 		} else {
 			topHeight = 0;
-			bottomHeight = m_currentSize.height();
+			bottomHeight += m_currentSize.height();
 		}
 		if(geom.x() <= r.x()) {
 			leftWidth = 0;
@@ -251,14 +249,14 @@ void FancyPanel::updateBorders(const QRect &geom, bool themeChange)
 		}
 	} else if(loc == LeftEdge || loc == RightEdge){
 		QRect r = Kephal::ScreenUtils::screenGeometry(s);
-		enabledBorders ^= FrameSvg::LeftBorder;
-		enabledBorders ^= FrameSvg::RightBorder;
+//		enabledBorders ^= FrameSvg::LeftBorder;
+//		enabledBorders ^= FrameSvg::RightBorder;
 		if(loc == LeftEdge) {
 			leftWidth = 0;
-			rightWidth = m_currentSize.width();
+			rightWidth += m_currentSize.width();
 		} else {
 			rightWidth = 0;
-			leftWidth = m_currentSize.width();
+			leftWidth += m_currentSize.width();
 		}
 		if(geom.y() <= r.y()) {
 			topHeight = 0;
@@ -286,36 +284,6 @@ void FancyPanel::updateBorders(const QRect &geom, bool themeChange)
 		}
 	}
 	if(m_layout) {
-		m_layout->setContentsMargins(leftWidth, topHeight, rightWidth,bottomHeight);
-	}
-	m_layout->invalidate();
-	resize(preferredSize());
-
-
-
-
-
-
-    //activate borders and fetch sizes again
-
-    //calculation of extra margins has to be done after getMargins
-    /* 
-    const QGraphicsItem *box = toolBox();
-    if (box && immutability() == Mutable) {
-        QSizeF s = box->boundingRect().size();
-        if (formFactor() == Vertical) {
-            //hardcoded extra margin for the toolbox right now
-            bottomHeight += s.height();
-            //Default to horizontal for now
-        } else {
-            rightWidth += s.width();
-        }
-    }
-    */
-
-    //invalidate the layout and set again
-    /* 
-    if (m_layout) {
         switch (location()) {
         case LeftEdge:
             rightWidth = qMin(rightWidth, qMax(qreal(1), size().width() - KIconLoader::SizeMedium));
@@ -332,22 +300,10 @@ void FancyPanel::updateBorders(const QRect &geom, bool themeChange)
         default:
             break;
         }
-
-        qreal oldLeft = leftWidth;
-        qreal oldTop = topHeight;
-        qreal oldRight = rightWidth;
-        qreal oldBottom = bottomHeight;
-
-        if (themeChange) {
-            m_layout->getContentsMargins(&oldLeft, &oldTop, &oldRight, &oldBottom);
-        }
-
-        m_layout->setContentsMargins(leftWidth, topHeight, rightWidth, bottomHeight);
-
-        m_layout->invalidate();
-        resize(preferredSize());
-    }
-	*/
+		m_layout->setContentsMargins(leftWidth, topHeight, rightWidth,bottomHeight);
+	        m_layout->invalidate();
+	}
+	resize(preferredSize());
 
     update();
 }
@@ -455,14 +411,10 @@ void FancyPanel::updateSize()
 	if(m_canResize && applet) {
 		if(formFactor() == Plasma::Horizontal) {
 			const int delta = applet->preferredWidth() - applet->size().width();
-			if(delta != 0) {
-				setPreferredWidth(preferredWidth() + delta);
-			}
+			setPreferredWidth(preferredWidth() + delta);
 		} else if(formFactor() == Plasma::Vertical) {
 			const int delta = applet->preferredHeight() - applet->size().height();
-			if(delta != 0) {
-				setPreferredHeight(preferredHeight() + delta);
-			}
+			setPreferredHeight(preferredHeight() + delta);
 		}
 		resize(preferredSize());
 		m_canResize = false;
