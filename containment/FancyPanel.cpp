@@ -155,7 +155,7 @@ void FancyPanel::paintInterface(QPainter *painter,
     //FIXME: this background drawing is bad and ugly =)
     // draw the background untransformed (saves lots of per-pixel-math)
     painter->resetTransform();
-//    painter->fillRect(rect(), Qt::transparent);
+    //painter->fillRect(rect(), Qt::transparent);
 
     const Containment::StyleOption *containmentOpt = qstyleoption_cast<const Containment::StyleOption *>(option);
 
@@ -468,7 +468,7 @@ void FancyPanel::constraintsEvent(Plasma::Constraints constraints)
     m_configureAction->setVisible(unlocked);
     }
 
-//    setBackgroundHints(NoBackground);
+    setBackgroundHints(NoBackground);
 
     enableAction("add widgets", true);
     enableAction("add space", true);
