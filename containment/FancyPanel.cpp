@@ -124,7 +124,7 @@ FancyPanel::FancyPanel(QObject *parent, const QVariantList &args) : Containment(
     m_background->setEnabledBorders(Plasma::FrameSvg::AllBorders);
     connect(m_background, SIGNAL(repaintNeeded()), this, SLOT(backgroundChanged()));
 
-//    setBackgroundHints(NoBackground);
+    setBackgroundHints(NoBackground);
 
     setZValue(150);
 
