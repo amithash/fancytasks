@@ -44,7 +44,7 @@ class FancyPanel : public Plasma::Containment
         ~FancyPanel();
 
         void init();
-        Plasma::Applet* addApplet(const QString &name, const QVariantList &args = QVariantList(), const QRectF &geometry = QRectF(-1, -1, -1, -1));
+/*         Plasma::Applet* addApplet(const QString &name, const QVariantList &args = QVariantList(), const QRectF &geometry = QRectF(-1, -1, -1, -1)); */
     void showDropZone(const QPoint pos);
         QList<QAction*> contextualActions();
    void paintInterface(QPainter *painter,

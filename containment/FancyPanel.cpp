@@ -155,7 +155,7 @@ void FancyPanel::paintInterface(QPainter *painter,
     //FIXME: this background drawing is bad and ugly =)
     // draw the background untransformed (saves lots of per-pixel-math)
     painter->resetTransform();
-    painter->fillRect(rect(), Qt::transparent);
+//    painter->fillRect(rect(), Qt::transparent);
 
     const Containment::StyleOption *containmentOpt = qstyleoption_cast<const Containment::StyleOption *>(option);
 
@@ -168,9 +168,6 @@ void FancyPanel::paintInterface(QPainter *painter,
         m_maskDirty = false;
         m_lastViewGeom = viewGeom;
         updateBorders(viewGeom);
-        if (containmentOpt && containmentOpt->view && !m_background->mask().isEmpty()) {
-            containmentOpt->view->setMask(m_background->mask());
-      }
     }
 
     // blit the background (saves all the per-pixel-products that blending does)
@@ -623,6 +620,7 @@ void FancyPanel::setSize(QSize size)
     setMaximumSize(size);
 }
 
+/* 
 Plasma::Applet* FancyPanel::addApplet(const QString &name, const QVariantList &args, const QRectF &geometry)
 {
     Q_UNUSED(name)
@@ -631,6 +629,8 @@ Plasma::Applet* FancyPanel::addApplet(const QString &name, const QVariantList &a
 
     return NULL;
 }
+
+*/
 
 K_EXPORT_PLASMA_APPLET(fancypanel, FancyPanel)
 
