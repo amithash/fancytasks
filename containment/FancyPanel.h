@@ -32,7 +32,7 @@ class Spacer;
 
 namespace Plasma
 {
-	class FrameSvg;
+    class FrameSvg;
 }
 
 class FancyPanel : public Plasma::Containment
@@ -45,18 +45,18 @@ class FancyPanel : public Plasma::Containment
 
         void init();
 /*         Plasma::Applet* addApplet(const QString &name, const QVariantList &args = QVariantList(), const QRectF &geometry = QRectF(-1, -1, -1, -1)); */
-    void showDropZone(const QPoint pos);
+        void showDropZone(const QPoint pos);
         QList<QAction*> contextualActions();
-   void paintInterface(QPainter *painter,
-                           const QStyleOptionGraphicsItem *option,
-                           const QRect& contentsRect);
+        void paintInterface(QPainter *painter,
+        const QStyleOptionGraphicsItem *option,
+        const QRect& contentsRect);
 
 
     protected:
         void constraintsEvent(Plasma::Constraints constraints);
-	void saveState(KConfigGroup &config) const;
-	void restore(KConfigGroup &group);
-	void saveContents(KConfigGroup &group) const;
+        void saveState(KConfigGroup &config) const;
+        void restore(KConfigGroup &group);
+        void saveContents(KConfigGroup &group) const;
 
     private:
         int getInsertIndex(Plasma::FormFactor f, const QPointF &pos);
@@ -70,20 +70,20 @@ class FancyPanel : public Plasma::Containment
         Spacer *m_spacer;
         Spacer *m_lastSpace;
         QTimer *m_lastSpaceTimer;
-	QTimeLine *m_animationTimeLine; 
+        QTimeLine *m_animationTimeLine; 
         Plasma::FrameSvg *m_background;
         QRect m_lastViewGeom;
         bool m_maskDirty;
         
-	friend class Spacer;
+        friend class Spacer;
 
    private slots:
-	void appletRemoved(Plasma::Applet* applet);
+        void appletRemoved(Plasma::Applet* applet);
         void adjustLastSpace();
-	void layoutApplet(Plasma::Applet* applet, const QPointF &pos);
-	void updateSize();
-	void enableUpdateSize();
-	void backgroundChanged();
+        void layoutApplet(Plasma::Applet* applet, const QPointF &pos);
+        void updateSize();
+        void enableUpdateSize();
+        void backgroundChanged();
     public slots:
         void setSize(QSize size);
 };
